@@ -64,7 +64,7 @@ def parse(stream, line = None, indent = ''):
 			if not islist:
 				if keyname:
 					if obj[keyname] == None:
-						o, line = parse(stream, '- ' + line, indent)
+						o, line = parse(stream, indent + '- ' + line, indent)
 						obj[keyname] = o
 
 					if not line or not indent + line.lstrip() == line:
