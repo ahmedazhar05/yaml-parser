@@ -27,67 +27,46 @@ def converttype(value):
 	else:
 		return value
 
-def parse(stream, line = None, level = 0, tab = None):
+# determining the level/depth of the line and returning stripped line
+def relevel(line, tabs = '  '):
+	tab_count = len(tabs)
+	spaces_count = len(line) - len(line.lstrip(' '))
+	level = spaces_count // tab_count
+	line = line[level * tab_count:]
+	return level, line
+
+def parse(stream, next = None, level = 0, tab = None):
 	if not line:
 		line = getcleanline(stream)
-	islistitem = False
 	keyname = None
-	l = []
-	d = {}
-	nestlen = 0
-	
-	sp_count = len(line) - len(line.lstrip(' '))
-	
-	# determining spaces-count of a single level indentation
-	if not tab and line.startswith(' '):
-		tab = ( ' ' * sp_count )
-	
-	# determining number of indents for the first line which should also be applied to the rest of the lines of the same indentation level
-	if line.startswith(' '):
-		lvl = sp_count // len(tab)
-		if not (lvl == level and sp_count == len(tab * lvl)):
-			raise Exception("Irregular indentation")
-		else:
-			nestlen = len(tab * lvl)
-	
-	
+	obj = None
+
 	while line:
-		if line.startswith(' '):
-			if keyname:
-				d[keyname] = parse(stream, line, level + 1, tab)
-			elif islistitem:
-				l.append(d | parse(stream, line, level + 1, tab))
-				d = {}
-			elif tab and nestlen >= len(tab):
-				if len(line) - len(line.lstrip(' ')) < nestlen:
-					raise Exception("Mapping values can't be determined")
-				else:
-					line = line[nestlen:]
-			else:
-				raise Exception("Mapping values can't be determined")
-	
+		lvl, line = relevel(line, tab)
+		if lvl == level - 1:
+			return obj, line
+		
 		if line.startswith('- '):
 			line = line[2:]
 			islistitem = True
-		
+
 		sep = re.search(r':(?= +[^\n]| *\n)', line)
-		if sep:
+		if sep and obj == None:
+			obj = {}
+		if sep and type(obj) == dict:
 			keyname = line[:sep.start(0)].strip()
 			if keyname[0] == keyname[-1] and keyname[0] in ['"', "'"]:
 				keyname = keyname[1:-1]
-			value = converttype(line[sep.start(0) + 2:])
-			d[keyname] = value
-			if not value == None:
+			value = line[sep.start(0) + 2:].strip()
+			obj[keyname] = converttype(value)
+			if len(value) > 0:
 				keyname = None
 		elif islistitem:
 			l.append(converttype(line))
+		else:
+			raise Exception('Uneven spaces')
 		
 		line = getcleanline(stream)
-	
-	# if islistitem:
-	# 	return l
-	# 	return [d]
-	return d
 
 
 import sys
@@ -96,6 +75,6 @@ if __name__ == '__main__':
 	
 	firstline = f.readline()
 	if firstline.strip() == '---':
-		print(parse(f))
+		print(parse(f)[0])
 	else:
-		print(parse(f, firstline))
+		print(parse(f, firstline)[0])
