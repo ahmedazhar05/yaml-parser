@@ -3,10 +3,8 @@ import re
 def getcleanline(stream):
 	line = stream.readline()
 	# matching lines that are not comments or unnecessary(empty) lines or partial lines that are not comments
-	mat = re.match(r' *(?!#)[^ \n].*?(?=\n| +#)', line)
+	mat = re.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
 	if mat:
-		if not mat.group(0).endswith('\n'):
-			return mat.group(0) + '\n'
 		return mat.group(0)
 	elif line:
 		return getcleanline(stream)
@@ -60,7 +58,6 @@ def parse(stream, line = None, indent = ''):
 				return obj, line
 			else:
 				continue
-				# line = line[len(indent):]
 		
 		if line.startswith('- '):
 			line = line[2:]
@@ -80,7 +77,7 @@ def parse(stream, line = None, indent = ''):
 			return obj, line
 
 		# finding key-value separator `:`
-		sep = re.search(r':(?= +[^\n]| *\n)', line)
+		sep = re.search(r':(?= +.| *$)', line)
 
 		if sep and islist:
 			o, line = parse(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)))
@@ -112,7 +109,7 @@ import sys
 if __name__ == '__main__':
 	f = open(sys.argv[1].strip(), 'r')
 
-	firstline = f.readline()
+	firstline = getcleanline(f)
 	if firstline.strip() == '---':
 		print(parse(f)[0])
 	else:
