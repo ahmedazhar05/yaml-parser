@@ -28,10 +28,13 @@ def converttype(value):
 		return value
 
 def parse(stream, line = None, indent = ''):
+	# if the next line is passed then take it else get the next line from the input stream
 	if not line:
 		line = getcleanline(stream)
 	islist = False
 	keyname = None
+
+	# determine if the returned object is a dictionary or a list
 	if re.match(r' *\- ', line):
 		islist = True
 		obj = []
