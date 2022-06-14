@@ -131,8 +131,8 @@ def parse(stream, line = None, indent = '', aliases = {}):
 					return obj, line, aliases
 				else:
 					continue
-			elif islist:
-				return obj, line, aliases
+		elif islist:
+			return obj, line, aliases
 
 		# finding key-value separator `:`
 		sep = re.search(r':(?= +.| *$)', line)
