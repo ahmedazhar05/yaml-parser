@@ -76,6 +76,14 @@ def parse(stream, line = None, indent = ''):
 						continue
 				else:
 					raise Exception("Key-Value pair cannot be determined")
+			elif line.startswith('- '):
+				o, line = parse(stream, '  ' + indent + line, indent + '  ')
+				obj.append(o)
+
+				if not line or not indent + line.lstrip() == line:
+					return obj, line
+				else:
+					continue
 		elif islist:
 			return obj, line
 
