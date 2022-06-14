@@ -62,8 +62,11 @@ def parse(stream, line = None, indent = ''):
 			else:
 				continue
 		
+		# list or list-item
 		if line.startswith('- '):
 			line = line[2:]
+
+			# list item defined on the same level as that of the parent dictionary
 			if not islist:
 				if keyname:
 					if obj[keyname] == None:
@@ -76,6 +79,8 @@ def parse(stream, line = None, indent = ''):
 						continue
 				else:
 					raise Exception("Key-Value pair cannot be determined")
+
+			# list within a list
 			elif line.startswith('- '):
 				o, line = parse(stream, '  ' + indent + line, indent + '  ')
 				obj.append(o)
@@ -90,6 +95,7 @@ def parse(stream, line = None, indent = ''):
 		# finding key-value separator `:`
 		sep = re.search(r':(?= +.| *$)', line)
 
+		# dictionary within a list
 		if sep and islist:
 			o, line = parse(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)))
 			obj.append(o)
@@ -98,6 +104,7 @@ def parse(stream, line = None, indent = ''):
 			else:
 				continue
 
+		# dictionary
 		if sep:
 			keyname = line[:sep.start(0)].strip()
 			if keyname[0] == keyname[-1] and keyname[0] in ['"', "'"]:
@@ -106,6 +113,8 @@ def parse(stream, line = None, indent = ''):
 			obj[keyname] = converttype(value)
 			if len(value) > 0:
 				keyname = None
+		
+		# list-item
 		elif islist:
 			obj.append(converttype(line.strip()))
 		else:
