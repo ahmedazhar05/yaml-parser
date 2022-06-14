@@ -11,23 +11,57 @@ def getcleanline(stream):
 	else:
 		return None
 
-def converttype(value):
-	if len(value) <= 0 or value.lower() in ['null', '~']:
-		return None
-	elif value[0] == value[-1] and value[0] in ['"', "'"]:
-		return value[1:-1]
-	elif value.lower() in ["yes", "true", "on"]:
-		return True
-	elif value.lower() in ["no", "false", "off"]:
-		return False
-	elif re.fullmatch(r'[+-]?\d+', value):
-		return int(value)
-	elif re.fullmatch(r'[+-]?\d+\.\d+?', value):
-		return float(value)
-	else:
-		return value
+def converttype(value, aliases):
+	anchor = None
+	output = None
+	
+	if len(value) > 1:
+		if value[0] == '*':
+			idx = value.find(' ')
+			if idx == 1:
+				raise Exception("Alias name cannot be empty")
+			if idx <= -1:
+				idx = None
+			if value[1:idx] in aliases:
+				output = aliases[value[1:idx]]
+				value = value[idx:].strip()
+				if idx == None:
+					value = ''
+				if not value == '':
+					raise Exception("Cannot assign both value and alias at the same time")
+				return output, anchor
+			else:
+				raise Exception("Cannot find alias for the given anchor")
+		elif value[0] == '&':
+			idx = value.find(' ')
+			if idx == 1:
+				raise Exception("Anchor name cannot be empty")
+			if idx <= -1:
+				anchor = value[1:]
+				value = None
+			else:
+				anchor = value[1:idx]
+				value = value[idx:].strip()
+				if value[0] == '*':
+					raise Exception("Incorrect combination of Anchors and Aliases")
 
-def parse(stream, line = None, indent = ''):
+	if len(value) <= 0 or value.lower() in ['null', '~']:
+		output = None
+	elif value[0] == value[-1] and value[0] in ['"', "'"]:
+		output = value[1:-1]
+	elif value.lower() in ["yes", "true", "on"]:
+		output = True
+	elif value.lower() in ["no", "false", "off"]:
+		output = False
+	elif re.fullmatch(r'[+-]?\d+', value):
+		output = int(value)
+	elif re.fullmatch(r'[+-]?\d+\.\d+?', value):
+		output = float(value)
+	else:
+		output = value
+	return output, anchor
+
+def parse(stream, line = None, indent = '', aliases = {}):
 	# if the next line is passed then take it else get the next line from the input stream
 	if not line:
 		line = getcleanline(stream)
@@ -46,11 +80,15 @@ def parse(stream, line = None, indent = ''):
 			if line.startswith(indent):
 				line = line[len(indent):]
 			else:
-				return obj, line
+				return obj, line, aliases
 
 		if line.startswith(' '):
-			o, line = parse(stream, indent + line, indent + (' ' * (len(line) - len(line.lstrip()))))
+			o, line, al = parse(stream, indent + line, indent + (' ' * (len(line) - len(line.lstrip()))), aliases)
+			aliases = aliases | al
 			if keyname:
+				if anchor:
+					aliases[anchor] = o
+					anchor = None
 				obj[keyname] = o
 			elif islist:
 				obj.append(o)
@@ -58,7 +96,7 @@ def parse(stream, line = None, indent = ''):
 				raise Exception("Key-Value pair cannot be determined")
 			
 			if not line or not indent + line.lstrip() == line:
-				return obj, line
+				return obj, line, aliases
 			else:
 				continue
 		
@@ -69,38 +107,43 @@ def parse(stream, line = None, indent = ''):
 			# list item defined on the same level as that of the parent dictionary
 			if not islist:
 				if keyname:
+					o, line, al = parse(stream, indent + '- ' + line, indent, aliases)
+					aliases = aliases | al
+					if anchor:
+						aliases[anchor] = o
+						anchor = None
 					if obj[keyname] == None:
-						o, line = parse(stream, indent + '- ' + line, indent)
 						obj[keyname] = o
 
 					if not line or not indent + line.lstrip() == line:
-						return obj, line
+						return obj, line, aliases
 					else:
 						continue
 				else:
 					raise Exception("Key-Value pair cannot be determined")
-
 			# list within a list
 			elif line.startswith('- '):
-				o, line = parse(stream, '  ' + indent + line, indent + '  ')
+				o, line, al = parse(stream, '  ' + indent + line, indent + '  ', aliases)
+				aliases = aliases | al
 				obj.append(o)
 
 				if not line or not indent + line.lstrip() == line:
-					return obj, line
+					return obj, line, aliases
 				else:
 					continue
-		elif islist:
-			return obj, line
+			elif islist:
+				return obj, line, aliases
 
 		# finding key-value separator `:`
 		sep = re.search(r':(?= +.| *$)', line)
 
 		# dictionary within a list
 		if sep and islist:
-			o, line = parse(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)))
+			o, line, al = parse(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)), aliases)
+			aliases = aliases | al
 			obj.append(o)
 			if not line or not indent + line.lstrip() == line:
-				return obj, line
+				return obj, line, aliases
 			else:
 				continue
 
@@ -110,19 +153,27 @@ def parse(stream, line = None, indent = ''):
 			if keyname[0] == keyname[-1] and keyname[0] in ['"', "'"]:
 				keyname = keyname[1:-1]
 			value = line[sep.start(0) + 2:].strip()
-			obj[keyname] = converttype(value)
-			if len(value) > 0:
+			o, anchor = converttype(value, aliases)
+			obj[keyname] = o
+			if len(value) > 0 and not anchor:
 				keyname = None
+			if not anchor == None and len(o) > 0:
+				aliases[anchor] = o
+				anchor = None
 		
 		# list-item
 		elif islist:
-			obj.append(converttype(line.strip()))
+			o, anchor = converttype(line.strip(), aliases)
+			if anchor:
+				aliases[anchor] = o
+				anchor = None
+			obj.append(o)
 		else:
-			return obj, line
+			return obj, line, aliases
 		
 		line = getcleanline(stream)
 	
-	return obj, line
+	return obj, line, aliases
 
 
 import sys
@@ -130,7 +181,6 @@ if __name__ == '__main__':
 	f = open(sys.argv[1].strip(), 'r')
 
 	firstline = getcleanline(f)
-	if firstline.strip() == '---':
-		print(parse(f)[0])
-	else:
-		print(parse(f, firstline)[0])
+	if firstline.rstrip() == '---':
+		firstline = None
+	print(parse(f, firstline)[0])
