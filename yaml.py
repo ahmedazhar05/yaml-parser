@@ -1,7 +1,7 @@
 import re as __re__
 
-def __getcleanline__(stream):
-	line = stream.readline()
+def __getcleanline__(stream) -> str:
+	line: str = stream.readline()
 	# matching lines that are not comments or unnecessary(empty) lines or partial lines that are not comments
 	mat = __re__.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
 	if mat:
@@ -11,13 +11,13 @@ def __getcleanline__(stream):
 	else:
 		return None
 
-def __converttype__(value, aliases):
-	anchor = None
-	output = None
+def __converttype__(value: str, aliases: dict) -> tuple[object, str]:
+	anchor: str = None
+	output: object = None
 	
 	if len(value) > 1:
 		if value[0] == '*':
-			idx = value.find(' ')
+			idx: int = value.find(' ')
 			if idx == 1:
 				raise Exception("Alias name cannot be empty")
 			if idx <= -1:
@@ -61,19 +61,19 @@ def __converttype__(value, aliases):
 		output = value
 	return output, anchor
 
-def __parse__(stream, line = None, indent = '', aliases = {}):
+def __parse__(stream, line: str = None, indent: str = '', aliases: dict = {}) -> tuple[object, str, dict]:
 	# if the next line is passed then take it else get the next line from the input stream
 	if not line:
 		line = __getcleanline__(stream)
-	islist = False
-	keyname = None
+	islist: bool = False
+	keyname: str = None
 
 	# determine if the returned object is a dictionary or a list
 	if __re__.match(r' *\- ', line):
 		islist = True
-		obj = []
+		obj: list = []
 	else:
-		obj = {}
+		obj: dict = {}
 	
 	while line:
 		if not indent == '':
@@ -176,8 +176,8 @@ def __parse__(stream, line = None, indent = '', aliases = {}):
 	return obj, line, aliases
 
 
-def parse(fs):
-	firstline = __getcleanline__(fs)
+def parse(fs: object) -> object:
+	firstline: str = __getcleanline__(fs)
 	if firstline.rstrip() == '---':
 		firstline = None
 	return __parse__(fs, firstline)[0]
@@ -185,5 +185,6 @@ def parse(fs):
 
 import sys as __sys__
 if __name__ == '__main__':
-	fs = open(__sys__.argv[1].strip(), 'r')
+	filename: str = __sys__.argv[1].strip()
+	fs: object = open(filename, 'r')
 	print(parse(fs))
