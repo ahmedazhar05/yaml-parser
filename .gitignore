@@ -1,3 +1,3 @@
-sample*.y*ml
-yaml?.py
+tests/integration/fixtures/sample*.y*ml
+src/yaml?.py
 __pycache__
