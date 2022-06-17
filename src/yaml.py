@@ -1,17 +1,17 @@
-import re as __re__
+import re
 
-def __getcleanline__(stream: object) -> str:
+def _getcleanline(stream: object) -> str:
 	line: str = stream.readline()
 	# matching lines that are not comments or unnecessary(empty) lines or partial lines that are not comments
-	mat = __re__.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
+	mat = re.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
 	if mat:
 		return mat.group(0)
 	elif line:
-		return __getcleanline__(stream)
+		return _getcleanline(stream)
 	else:
 		return None
 
-def __converttype__(value: str, aliases: dict) -> tuple[object, str]:
+def _converttype(value: str, aliases: dict) -> tuple[object, str]:
 	anchor: str = None
 	output: object = None
 	
@@ -53,23 +53,23 @@ def __converttype__(value: str, aliases: dict) -> tuple[object, str]:
 		output = True
 	elif value.lower() in ["no", "false", "off"]:
 		output = False
-	elif __re__.fullmatch(r'[+-]?\d+', value):
+	elif re.fullmatch(r'[+-]?\d+', value):
 		output = int(value)
-	elif __re__.fullmatch(r'[+-]?\d+\.\d+?', value):
+	elif re.fullmatch(r'[+-]?\d+\.\d+?', value):
 		output = float(value)
 	else:
 		output = value
 	return output, anchor
 
-def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict = {}) -> tuple[list | dict, str, dict]:
+def _parse(stream: object, line: str = None, indent: str = '', aliases: dict = {}) -> tuple[list | dict, str, dict]:
 	# if the next line is passed then take it else get the next line from the input stream
 	if not line:
-		line = __getcleanline__(stream)
+		line = _getcleanline(stream)
 	islist: bool = False
 	keyname: str = None
 
 	# determine if the returned object is a dictionary or a list
-	if __re__.match(r' *\- ', line):
+	if re.match(r' *\- ', line):
 		islist = True
 		obj: list = []
 	else:
@@ -83,7 +83,7 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 				return obj, line, aliases
 
 		if line.startswith(' '):
-			o, line, al = __parse__(stream, indent + line, indent + (' ' * (len(line) - len(line.lstrip()))), aliases)
+			o, line, al = _parse(stream, indent + line, indent + (' ' * (len(line) - len(line.lstrip()))), aliases)
 			aliases = aliases | al
 			if keyname:
 				if anchor:
@@ -107,7 +107,7 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 			# list item defined on the same level as that of the parent dictionary
 			if not islist:
 				if keyname:
-					o, line, al = __parse__(stream, indent + '- ' + line, indent, aliases)
+					o, line, al = _parse(stream, indent + '- ' + line, indent, aliases)
 					aliases = aliases | al
 					if anchor:
 						aliases[anchor] = o
@@ -123,7 +123,7 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 					raise Exception("Key-Value pair cannot be determined")
 			# list within a list
 			elif line.startswith('- '):
-				o, line, al = __parse__(stream, '  ' + indent + line, indent + '  ', aliases)
+				o, line, al = _parse(stream, '  ' + indent + line, indent + '  ', aliases)
 				aliases = aliases | al
 				obj.append(o)
 
@@ -135,11 +135,11 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 			return obj, line, aliases
 
 		# finding key-value separator `:`
-		sep = __re__.search(r':(?= +.| *$)', line)
+		sep = re.search(r':(?= +.| *$)', line)
 
 		# dictionary within a list
 		if sep and islist:
-			o, line, al = __parse__(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)), aliases)
+			o, line, al = _parse(stream, '  ' + indent + line, indent + (' ' * (len(line) - len(line.lstrip(' ')) + 2)), aliases)
 			aliases = aliases | al
 			obj.append(o)
 			if not line or not indent + line.lstrip() == line:
@@ -153,7 +153,7 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 			if keyname[0] == keyname[-1] and keyname[0] in ['"', "'"]:
 				keyname = keyname[1:-1]
 			value = line[sep.start(0) + 2:].strip()
-			o, anchor = __converttype__(value, aliases)
+			o, anchor = _converttype(value, aliases)
 			obj[keyname] = o
 			if len(value) > 0 and not anchor:
 				keyname = None
@@ -163,7 +163,7 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 		
 		# list-item
 		elif islist:
-			o, anchor = __converttype__(line.strip(), aliases)
+			o, anchor = _converttype(line.strip(), aliases)
 			if anchor:
 				aliases[anchor] = o
 				anchor = None
@@ -171,20 +171,20 @@ def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict 
 		else:
 			return obj, line, aliases
 		
-		line = __getcleanline__(stream)
+		line = _getcleanline(stream)
 	
 	return obj, line, aliases
 
 
 def parse(fs: object) -> list | dict:
-	firstline: str = __getcleanline__(fs)
+	firstline: str = _getcleanline(fs)
 	if firstline.rstrip() == '---':
 		firstline = None
-	return __parse__(fs, firstline)[0]
+	return _parse(fs, firstline)[0]
 
 
-import sys as __sys__
+import sys
 if __name__ == '__main__':
-	filename: str = __sys__.argv[1].strip()
+	filename: str = sys.argv[1].strip()
 	fs: object = open(filename, 'r')
 	print(parse(fs))
