@@ -1,6 +1,6 @@
 import re as __re__
 
-def __getcleanline__(stream) -> str:
+def __getcleanline__(stream: object) -> str:
 	line: str = stream.readline()
 	# matching lines that are not comments or unnecessary(empty) lines or partial lines that are not comments
 	mat = __re__.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
@@ -61,7 +61,7 @@ def __converttype__(value: str, aliases: dict) -> tuple[object, str]:
 		output = value
 	return output, anchor
 
-def __parse__(stream, line: str = None, indent: str = '', aliases: dict = {}) -> tuple[object, str, dict]:
+def __parse__(stream: object, line: str = None, indent: str = '', aliases: dict = {}) -> tuple[list | dict, str, dict]:
 	# if the next line is passed then take it else get the next line from the input stream
 	if not line:
 		line = __getcleanline__(stream)
@@ -176,7 +176,7 @@ def __parse__(stream, line: str = None, indent: str = '', aliases: dict = {}) ->
 	return obj, line, aliases
 
 
-def parse(fs: object) -> object:
+def parse(fs: object) -> list | dict:
 	firstline: str = __getcleanline__(fs)
 	if firstline.rstrip() == '---':
 		firstline = None
