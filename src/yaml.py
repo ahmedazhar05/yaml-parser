@@ -3,7 +3,7 @@ import re
 def _getcleanline(stream: object) -> str:
 	line: str = stream.readline()
 	# matching lines that are not comments or unnecessary(empty) lines or partial lines that are not comments
-	mat = re.match(r' *(?!#)[^ ].*?(?=$|\n| +#)', line)
+	mat = re.match(r' *(?!#)[^ \n].*?(?=$|\n| +#)', line)
 	if mat:
 		return mat.group(0)
 	elif line:
@@ -55,7 +55,7 @@ def _converttype(value: str, aliases: dict) -> tuple[object, str]:
 		output = False
 	elif re.fullmatch(r'[+-]?\d+', value):
 		output = int(value)
-	elif re.fullmatch(r'[+-]?\d+\.\d+?', value):
+	elif re.fullmatch(r'[+-]?\d*\.\d+', value) or re.fullmatch(r'[+-]?\d+\.\d*', value):
 		output = float(value)
 	else:
 		output = value
