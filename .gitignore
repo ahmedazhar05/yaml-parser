@@ -1,3 +1,4 @@
 tests/integration/fixtures/sample*.y*ml
 src/yaml?.py
-*/__pycache__
+**/__pycache__
+.pytest_cache

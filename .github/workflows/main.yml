@@ -1,0 +1,46 @@
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "master" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      continue-on-error: ${{ matrix.experimental }}
+      matrix:
+        python-version:
+          - "3.10"
+        experimental:
+          - no
+        include:
+          - python-version: '3.x'
+            experimental: yes
+
+    steps:
+      # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it
+      - uses: actions/checkout@v3
+
+      # Sets up python packages and environment to work on
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Installs all the required modules for testing
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements_dev.txt
+
+      # Runs the defined set of tests using the pytest
+      - name: Run tests
+        run: python -m pytest .
