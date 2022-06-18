@@ -14,8 +14,8 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
-      continue-on-error: ${{ matrix.experimental }}
       matrix:
         python-version:
           - "3.10"
