@@ -20,10 +20,10 @@ jobs:
         python-version:
           - "3.10"
         experimental:
-          - no
+          - false
         include:
           - python-version: '3.x'
-            experimental: yes
+            experimental: true
 
     steps:
       # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it
